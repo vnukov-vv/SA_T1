@@ -89,3 +89,139 @@ N1 .. UC4
 
 @enduml
 ```
+<table width="1000" border="1">
+<thead>
+  <tr>
+    <td rowspan="3"><img width="300px" src="https://github.com/user-attachments/assets/9d985eaa-c3fc-4ab3-b84c-4acbd7c1bbb2"></td>
+    <td colspan="2" width="700"><p align="center"><b>Заказ Карты через Сайт</b></p></td>
+  </tr>
+  <tr>
+    <td>Дата</td>
+    <td>05.08.2024</td>
+  </tr>
+  <tr>
+    <td>Версия</td>
+    <td>1.0</td>
+  </tr>
+</thead>
+</table>
+
+![SVG](https://www.plantuml.com/plantuml/svg/dLVHRXj557sVhxZoIq35KF4ODQYbBxnHYJxouYQB5CdObUsMeifIOhUbA1Kk4HAe0YeaFc2zjPlDEgb_uSuVSOucszaPZKcWKhN9xDnpppttp9tDpU6eCnWz-BPhpAtTKNyW-afNMkfIp-t4c7lzHxAbFskkvrfjcS_x3tfxdS7tqjA_i7Pg9otf3EMxx9wOEy3Ptzs_t-cD-5fBUsWdm3dJNBxkwJkTsmF4pFKTbYijkVYhvdQc1LvM19B-O2yR30Ce85K8ET0I5DwOhBSd85KpEqFeMrtQYG3-o4xi2m7SELQUeu2PdKd8PClSxdUxsUvelzyRYhx6nXyqPrpuuXUaP50Ej4fpdtQh-SyqnP9hrqouqFwCoc1TjaMFxLDmNGZ8vMAVOSiA_mixjJy9Kr4Sl2ljCpirPf1z8_s7sO00Y8xanDubLT4pPjA5vW0izTHmjyjgJF_-AAHpeztc6t5iZhHmVDP40yQAKd8haLYmCJixmXPH0JsXCt9x0AP7ihEJAjL3pzan1uqSTgeLkDC6BO_dP6yPq-cEn4ZM7MOIO0A5Yb1-4QaL2VPyLElp4ZfEt1gKUeBtbHF5pZxHbrfWsNdef5wkC_u1XWKedmR0p0W1-TYeuTzAIFP32oScVwmjxHp-WJs43Bg4ReVOWTxhohu0r142Is68djU_ViXq49wFJUfIlZMGLhGtZT_82ECmkdQ1EqpEVdU-_EgkF6wGoyV6lVSxiOsXhD6lV7hzkkYV-cgpdV3ObfOU0_ev1JZnEPm3Ib9b_rka5nkdRJoHwB0JEatTT71G7tP6MJmUOe0OqX-iQESsgvox0uNps9WYMcALlGmF8HSlJnVDYy3hZOhaOYYkw15IS9wFu1_vLbrqzTRTsr_8O_XzfJas4AK-NEE6XRt0WVPis-yupKmfzIZLC-5vGEUcB5RBUgYYOZy2fgqcRll2k1jAquMR_XiBytNvedJDLCnAboCfU5Rr01gdGCZ2c_vgvH-xiYAAx-lKF4LaJ3Ei6OGT1GytmaiQeo6TLes1cLJBpzZVqB0tR1vdaQv8WYnJ4pTzkRmEoBpLXOE826aUZOQKXTPfA3iRCvZilSHUsEPDUkd4uPaF0cA0UkEDTh2EGCyuy1YhhCSY-JBP_t62b-j7ZPtmCRlkBZSgu_gTSkaY-7Oeqxrdt-ElZAltk_WF7nEfoNrnRTed_WgBMDESIGBRxs-xnkrbduRE2iOJcqV1TCvBEg5Gv2p2nD84dheSpyiT0oN1KxjYX_nBinBXxKYxHDPBZsvSLY9Df7TybcDTaaJZpu1W12_TI6HK-6cZXR1y-B3KeYduJHW7Vqxy0m00)
+
+```plantuml
+@startuml
+
+Actor Клиент
+
+box 'Банк'
+Boundary "Сайт" as web 
+Participant "Система \nобработки \nЗаявок" as orders
+Participant Скоринг
+end box
+
+box 'может быть внешняя Система'
+Collections Печать
+Collections Доставка
+end box
+
+'''''''''''''
+Клиент ++
+
+Клиент -> web ++ : Вход на целевую страницу
+
+ref over web : Система рекомендаций
+web -> web
+
+opt
+Клиент <-- web  : Вывод предложений
+end
+
+== Заказ Карты ==
+
+Клиент -> web  : Выбор продукта \n"Заказать"
+
+alt 
+ else Клиент банка
+   ref over Клиент, web : Аутентификация/Авторизация
+ else Новый Клиент
+   opt
+   Клиент <-- web  : Форма ввода Заявки \n(с персональными данными)
+   end
+   Клиент -> web  : Заполняет Заявку
+end
+
+web -> orders ++ : POST {Заявка}
+orders -> orders : 
+web <-- orders : 200 ОК
+opt
+Клиент <-- web -- : "Ваша заявка принята"
+end
+
+Клиент --
+
+orders -> Скоринг -- : POST {Заявка}
+
+activate Скоринг
+Скоринг -> Скоринг
+ref over Скоринг : Обмен с внешними \nСистемами
+Скоринг -> Скоринг
+
+'''''''''''''
+
+alt 
+ else Заявка отклонена
+   Скоринг x-> orders  ++ : PATCH {флаг отказа}
+   opt
+   orders -> Клиент : "Мы не можем выпустить вам Карту"
+   orders --
+   end 
+ else Заявка одобрена
+   Скоринг -> orders  : PATCH {параметры карты}
+   Скоринг --
+   orders ++
+   opt
+   orders -> Клиент : "Вам одобрена Карта {параметры} \nподтвердите выпуск Карты"
+   orders --
+   end
+end
+
+== Изготовление Карты ==
+
+Клиент -> web ++ : Подтверждение выпуска
+web -> orders  : PATCH {флаг подтверждения}
+web --
+orders ++
+orders -> Печать ++ : POST {Заявка}
+orders --
+
+Печать -> Печать 
+orders <- Печать -- : PATCH {Заявка выполнена}
+orders ++
+   opt
+   orders -> Клиент : "Вам выпущена Карта. \nВыберите параметры доставки"
+   orders --
+   end
+
+== Доставка Карты ==
+
+Клиент -> web ++ : вход на целевую страницу
+opt
+Клиент <- web : форма доставки
+end
+Клиент -> web : ввод данных
+web -> orders ++ : PATCH {атрибуты доставки}
+web --
+orders -> Доставка ++ : POST {атрибуты доставки}
+orders --
+Доставка -> Доставка 
+Доставка -> Клиент : Доставка Карты
+Доставка --
+Клиент --> Доставка ++ : Подтверждение доставки
+Доставка -> orders ++ : PATCH {флаг доставки}
+Доставка --
+orders -> orders : PATCH {перенос Заявки в архив}
+orders --
+@enduml
+
+```
+
