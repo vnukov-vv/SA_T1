@@ -1,11 +1,11 @@
 # Задание №3
 > API, Swagger, YAML
 
-1. В [Swagger](https://editor.swagger.io/) вставить полученный файл[^1], спроектировать и описать 2 метода в YAML: PATCH и DELETE.
+1. В [Swagger](https://editor.swagger.io/) вставить полученный *файл*, спроектировать и описать 2 метода в YAML: PATCH и DELETE.
    Можно переиспользовать схемы NewAccount и/или UserUpdate или придумать и описать новую(ые) схему(ы).
 2. Любой из методов пометить устаревшим (для этого используется специальный булев атрибут).
 
-[^1] : <details><summary> файл </summary>
+<details><summary> <i>см. файл</i> </summary>
 
 ```yaml
 openapi: 3.0.0
@@ -180,17 +180,17 @@ components:
 
 ```
 </details>
------
+--------
 
 <table width="1000" border="1">
 <thead>
   <tr>
     <td rowspan="3"><img width="300px" src="https://github.com/user-attachments/assets/9d985eaa-c3fc-4ab3-b84c-4acbd7c1bbb2"></td>
-    <td colspan="2" width="700"><p align="center"><b>API Доставка карты Клиенту Курьером</b></p></td>
+    <td colspan="2" width="700"><p align="center"><b>API </b></p></td>
   </tr>
   <tr>
     <td>Дата</td>
-    <td>05.08.2024</td>
+    <td>07.08.2024</td>
   </tr>
   <tr>
     <td>Версия</td>
