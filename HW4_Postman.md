@@ -463,7 +463,7 @@
 </thead>
 </table>
 
-# GitHub
+## GitHub
 
 ![image](https://github.com/user-attachments/assets/33425ad3-98e6-484a-b904-908a8216fa6b)
 [Репозиторий](https://github.com/vnukov-vv/Created-with-Postman) изменил на "Public"
@@ -594,4 +594,9 @@
 ```
 </details>
 
+## NASA
+
+![image](https://github.com/user-attachments/assets/76f0b4ae-c9e5-432a-ae48-2872143e5196)
+
+[Ссылка из ответа] (https://www.meteorshowers.org/view/perseids)
 
