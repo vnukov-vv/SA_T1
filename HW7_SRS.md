@@ -185,6 +185,9 @@ components:
 
 ## Предварительные действия
 - Реализована модель данных в СУБД
+![image](https://github.com/user-attachments/assets/493c53f7-d036-409a-a5f5-ab32c9227022)
+
+
 - Пользователь прошел аутентификацию и авторизацию
 
 ## Ограничения по ролям
@@ -336,6 +339,67 @@ components:
 
 ## Предварительные действия
 - Реализована модель данных в СУБД
+
+
+
+<details><summary> <i> Код DBML</i> </summary>
+
+```dbml
+/* ACCOUNTS - Счета */
+
+// База данных предназначена для управления счетами в АБС Банка в удаленных каналах.
+
+// Описание таблицы ACC
+Table acc as acc [note: 'Счет']{
+  accountId bigint [primary key, unique, note: 'Первичный ключ.(12)']	
+  accountName nvarchar [null, note: 'Наименование Счета.(50)']
+  clientId bigint [not null, note: 'ID Клиента.(9)']
+  clientName nvarchar [not null, note: 'ID Клиента.(50)']
+  bals smallint [not null, note: 'Балансовый Счет.(5)']
+  cur smallint [not null, note: 'Балансовый Счет.(5)']
+  S bigint [not null, note: 'Номер счета.(20)']
+  type nvarchar [not null, note: 'Тип Счета А/П.(1)']
+  status nvarchar [not null, note: 'Статус Счета А/П.(20)']
+  edited timeStamp [not null, note: 'Дата модификации']
+}
+
+// Описание таблицы CLIENTS
+Table clients as cli [note: 'Клиенты Банка'] {
+  сlientId bigint [primary key, unique, note: 'Уникальный идентификатор в АБС.(8)']
+  clientName nvarchar [not null, note: 'ФИО или Наименование (255)']  
+}
+
+// Описание таблицы BALS
+Table bals as bals [note: 'Балансовый Счет'] {
+  bal smallint [not null, note: 'Балансовый Счет.(5)'] 
+  name nvarchar [not null, note: 'Описание.(50)']  
+}
+
+// Описание таблицы CUR
+Table cur as cur [note: 'Валюты'] {
+  id nvarchar [primary key, unique, note: 'Цифровой код (3)'] 
+  code nvarchar [note: 'Буквенный код.(3)']
+  name nvarchar [not null, note: 'Наименование Валюты.(50)']  
+}
+
+// Описание таблицы STATUSES
+Table statuses as stat [note: 'Статусы'] {
+  id smallint [primary key, increment, note: 'Первичный ключ.(2)'] 
+  name nvarchar [note: 'Наименование Статуса.(20)']
+  ext nvarchar [note: 'Описание Статуса.(50)']
+}
+
+// Описание Внешних Ключей
+
+Ref:acc.bals > bals.bal
+Ref: acc.clientId > cli.сlientId
+Ref: acc.clientName > cli.clientName
+Ref: acc.cur > cur.code
+Ref: acc.status > stat.id
+
+```
+</details>
+
 - Пользователь прошел аутентификацию и авторизацию
 
 ## Ограничения по ролям
