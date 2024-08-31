@@ -537,9 +537,9 @@ end
 |Параметр|Тип|Длина|Расположение (body)|Обязательность|Описание|Место для сохранения|
 |-|-|-|-|-|-|-|
 |*clientId*|string|body|11|+|Уникальный идентификатор счета|acc.clientId|
-|*bals*|string|body|5|+|Уникальный идентификатор счета|acc.bals|
-|*currency*|string|body|3|+|Уникальный идентификатор счета|acc.cur|
-|*accountName*|string|body|50|-|Уникальный идентификатор счета|acc.name|
+|*bals*|string|body|5|+|Балансовый счет второго порядка|acc.bals|
+|*currency*|string|body|3|+|Валюта счета счета|acc.cur|
+|*accountName*|string|body|50|-|Наименование счета|acc.name|
 
 #### Пример
 
