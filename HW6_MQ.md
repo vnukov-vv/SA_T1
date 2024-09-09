@@ -324,5 +324,121 @@ end note
 
 ## <a id="title7"> 7. Описание Kafka </a>
 
+<details><summary> <i> Предусловие: (развернуть)</i> </summary>
+
+В Сервисе уже реализован **Обработчик**, который умеет возвращать из БД атрибуты адресных элементов в формате **ГАР**
+
+|Наименование элемента|Сокращенное наименование (код) элемента|	Формат элемента|	Признак обязательности элемента|Дополнительная информация|
+|:-|:-|:-:|:-:|:-|
+|Глобальный уникальный идентификатор объекта (INTEGER)|	OBJECTID|	N(19)|+|
+|Глобальный уникальный идентификатор объекта (UUID)|	OBJECTGUID|T(36)|+|
+|Глобальный уникальный идентификатор объекта (UUID)|	OBJECTGUID|T(36)|+|
+|Наименование адресного объекта|	NAME|T(1-100)|+|Полный адрес одной строкой
+|Уровень детализации|	LEVEL|T(1-2)|+|0 — страна <br>1 — регион <br>3 — район <br>4 — город <br>5 — район города <br>6 — населенный пункт <br>7 — улица <br>8 — дом <br>9 — квартира или комната
+|Действующий|	ISACTIVE|T(1)|+|1 — актуальный<br>0 — неактуальный|
+
+</details>
+
+![SVG](https://www.plantuml.com/plantuml/svg/fLDTJnD157sVNt6pFDWkjBmZ9HX33974MdWJG_PZ91ksE-lEhWaX90A97z6WH9zyGFq7fL9TWSfVcFr7djbjjmqqX6YJJgPpxZttt7Dl5sLiHN7IzXcBlTZdfBvcBzKVrLDdsRvAytjNTLHVfQf7sLxs2b1VTG2asGV2QnznFVK33ns0gKePkyD2a7gE5rf1J8PftcikcoQj1-gxwY6mYzozYRa6MPAiqBjAe8wWuLphoFQ6ghAto3WhU7y1kjJFW07DuhAFCZsS-9cpsfRFdYSyuMIeevpXJ8kvPVQMzMpBkgRgM9rexUf4PsIl2pthGPuXjoLphTYoBPcNL9z9VL8VrRSSTMt60X5pifn8I4bpLAEyx2aCES_Uez5twZVb2YurBsdN2PexwgSwpK4UkA7m80Kzr2ZYw4x6oowf2psVx0s-1tg8w2_LTzqG9eYfTGcTTa4DuQZOHzmXeGxIT8AUHNR8CCZomwma5a7Ijdb4nXFJd3BDfmPZ61NL5hItD3rDKvl2Tz6AQRQMLjUe-MXr3UCnZDc1jfrTms287QRC5TkMvc8wAitFdhgWyOba1s0ecmE1hZbVgmqPZjKNsYbnlDJhzLt6V272SNcbgWTB0r6ZfDrhhBgYJFoOAeEW3I_O22EnYMTPHJYyfxp4k4UD1ZtKUqAD1XlqMImE69kHS1E7HotkYCYTNwWCUwh58lGSOsOqmFBQjBPzORdLmQg85ppIQmKsHmGoQVEeBXDREf5dyyfzuVlSYJqWTUa5cpx7m5Oy6L-jLAtUPQoG1Nq5Nwk8g8nf28V54J4AX0SEBBX5l6iZVFNn2bMqm30k05WyXXGcLuaLIMDsaOJ3BIv3jCCdbe6_ckr6WulqoGuNs2IBmVmF5fUrIez7cpuoxiQM_cTVH-ZCWA_yizKOOukmCsdxVm40)
+
+<details><summary> <i> см. plantUML (развернуть)</i> </summary>
+
+```plantuml
+@startuml
+
+title Проектирование сценария интеграции
+
+'
+participant "**API** \nСервис интеграции" as api
+participant "**Балансировщик** \nзапросов/ответов" as bal
+queue "Брокер \nзапросов/ответов" as kafka
+participant "**Обработчик**\n" as sys
+database "БД ГАР" as db
+
+note across : - отдельный топик на каждый endpoint  \n- requestId маршрутизируется в свободную партицию
+
+''''''''''
+autonumber "[**#**]"
+
+api -> bal ++ #gold : **REST POST** ""/request{}""
+bal -> bal : Присваиваем запросу ""requestId""
+api <-- bal : ОК {requestId : ...}
+
+loop
+api -> bal : **REST GET** ""/{requestId}""
+api <-- bal : ""result (request_in_progress)""
+end loop
+
+''''''''''
+== Kafka ==
+
+bal -> kafka : ProducerRecord<>("request-topic", requestId, requestPayload)
+
+note over sys : consumer.subscribe(Collections.singletonList("request-topic"));
+
+kafka -> sys : Request(requestId, payload)
+sys -> sys : processRequest(requestId, payload)
+sys -> db : SQL (script)
+sys <-- db : SQL (result) 
+
+sys --> kafka :  sendResponse(requestId, payload)
+bal <-- kafka : ProducerRecord<>("response-topic", requestId, responsePayload)
+
+note over bal : consumer.subscribe(Collections.singletonList("response-topic"));
+
+bal -> bal : processResponse(requestId, payload)
+
+api -> bal : **REST GET** ""/{requestId}""
+api <-- bal : ""{requestId,payload}""
+bal --
+
+@enduml
+
+```
+</details>
+
+### Обеспечение согласованности партиций 
+
+- **Использование одного ключа для запросов и ответов**:
+
+Чтобы сообщения с запросом и ответом попали в одну партицию, необходимо использовать одинаковый ключ для обеих операций.
 <br>
+Обычно ключом может быть уникальный идентификатор запроса (например, requestId), который передается с сообщением запроса и используется также для отправки ответа.
+
+- **Настройка консистентного хэширования**:
+Kafka использует консистентное хэширование по ключу для распределения сообщений по партициям. Когда ключ одинаков, хэш-алгоритм помещает оба сообщения (запрос и ответ) в одну и ту же партицию.
+<br>
+
+- **Контроль за количеством партиций**:
+Необходимо убедиться, что у обоих топиков (запросов и ответов) одинаковое количество партиций. Это необходимо для того, чтобы ключ всегда отправлялся в одну и ту же партицию в обоих топиках.
+
+### Идентификатор requestId
+
+Идентификатор requestId обычно присваивается на этапе создания запроса, то есть до отправки сообщения в Kafka.
+
+- **Плюсы генерации requestId на уровне балансировщика**:
+  - Централизованное управление: Все запросы, проходящие через балансировщик, получают уникальный идентификатор, что упрощает отслеживание запросов и ответов.
+  - Гибкость: Если клиент или API не передают requestId, балансировщик может его сгенерировать.
+  - Согласованность: Балансировщик может гарантировать, что один и тот же идентификатор будет использован для всех сообщений, связанных с запросом (запрос и ответ будут попадать в одну и ту же партицию Kafka).
+
+### Основные шаги:
+
+1. **Обработчик**:
+
+`consumer.subscribe(Collections.singletonList("request-topic"))` — подписывает консумер **Обработчика**  на топик "request-topic", чтобы он мог получать сообщения.
+
+`consumer.poll(Duration.ofMillis(100))` — метод, который извлекает сообщения из Kafka-топика с указанным таймаутом (100 миллисекунд). Если сообщений нет, консумер будет ждать.
+
+После обработки запроса **Обработчик** создает ответ содержащий:
+- `requestId` - ключ для отправки сообщения в Kafka. Это важно, так как балансировщик использует этот идентификатор для маршрутизации и сопоставления запросов и ответов.
+- `responsePayload` - Ответные данные, полезная нагрузка с результатом обработки запроса, например, данные об адресе.
+
+2. **Балансировщик**:
+
+`consumer.subscribe(Collections.singletonList("response-topic"))` — подписывает консумер **Балансировщика** на топик "request-topic", чтобы он мог получать сообщения.
+
+`consumer.poll(Duration.ofMillis(100))` — метод, который извлекает сообщения из Kafka-топика с указанным таймаутом (100 миллисекунд). Если сообщений нет, консумер будет ждать.
+
+`requestId` используется для сопоставления ответа с исходным запросом, который ранее был отправлен.
+
 <br>
