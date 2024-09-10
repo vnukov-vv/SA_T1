@@ -487,5 +487,292 @@ Kafka использует консистентное хэширование п�
   }
 }
 ```
+### Спецификация 
+> в формате [AsyncAPI](https://studio.asyncapi.com/)
+<details><summary> <i>  (развернуть)</i> </summary>
+
+```yaml
+asyncapi: 3.0.0
+
+### Общая информация ###
+info:
+  title: GAR Address Service Kafka API
+  version: 1.0.0
+  description: |-
+    API для **Сервиса Адресов**, используемого для получения адреса и его идентификатора в формате **ГАР**.
+    ### Основные функции:
+    - Обработка запросов из **Балансировщика** и передача их в **Обработчик**
+    - Получение ответов из **Обработчика** и передача их в **Балансировщик**
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+### Тип сообщений ###
+defaultContentType: application/json
+
+### Брокер ###
+servers:
+### Сервер 1
+  scram-connections:
+    host: gar-service-kafka.bank.ru:9092
+    protocol: kafka-secure
+    description: |-
+    # secured with SCRAM-SHA-256
+    # использует механизм аутентификации, основанный на пароле. Может использоваться в случаях, когда требования к пропускной способности и скорости взаимодействия выше, так как пароли легче обрабатывать по сравнению с сертификатами.
+    
+    security:
+      - $ref: '#/components/securitySchemes/saslScram'
+    tags:
+      - name: env:production
+        description: SCRAM-SHA-256
+      - name: visibility:private
+        description: Авторизованные пользователи
+
+### Сервер 2
+  mtls-connections:
+    host: gar-service-kafka.bank.ru:9093
+    protocol: kafka-secure
+    description: |-
+    # Secured with mutual TLS
+    # Более строгая аутентификации с помощью сертификатов. Может требовать больше ресурсов, но предоставлять лучшее шифрование и защиту для критически важных приложений или инфраструктурных компонентов.    
+    
+    security:
+      - $ref: '#/components/securitySchemes/certs'
+    tags:
+      - name: env:production-mtls
+        description: mTLS
+      - name: visibility:private
+        description: Авторизованные пользователи
+
+## Можно использовать два сервера ##
+
+# - Разные методы аутентификации и безопасности
+# - Разделение пользователей или систем
+# - Различные требования к производительности
+# - Повышение отказоустойчивости и гибкости
+# - Разделение по окружениям и условиям использования
+
+#### Топики ####
+channels:
+#### Запрос 
+  request-topic:
+    address: gar-service.request-topic
+    description: Адрес топика запросов.
+    messages:
+      request:
+        $ref: '#/components/messages/request'
+
+#### Ответ
+  response-topic:
+    address: gar-service.response-topic
+    description: Адрес топика ответов
+    messages:
+      response:
+        $ref: '#/components/messages/response'
+
+#### Операции ####
+operations:
+#### Запрос
+  sendRequest:
+    action: send
+    channel:
+      $ref: '#/channels/request-topic'
+    traits:
+      - $ref: '#/components/operationTraits/kafka'
+    messages:
+      - $ref: '#/channels/request-topic/messages/request'
+#### Ответ
+  getResponse:
+    action: receive
+    channel:
+      $ref: '#/channels/response-topic'
+    traits:
+      - $ref: '#/components/operationTraits/kafka'
+    messages:
+      - $ref: '#/channels/response-topic/messages/response'
+
+### Компоненты ###
+components:
+### Сообщения
+  messages:
+### Запрос
+    request:
+      name: Запрос
+      title: Запрос адресных данных
+      summary: Сообщение с запросом.
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          requestId:
+            $ref: '#/components/schemas/requestId'
+          requestPayload:
+            $ref: '#/components/schemas/requestPayload'
+        required:
+          - requestId
+          - requestPayload
+      bindings:
+        kafka:
+          key:
+            $ref: '#/components/schemas/requestId'
+
+### Ответ
+    response:
+      name: Ответ
+      title: Адресные данные в формате ГАР
+      summary: Собщение с ответом.
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          requestId:
+            $ref: '#/components/schemas/requestId'
+          responsePayload:
+            $ref: '#/components/schemas/responsePayload'
+        required:
+          - requestId
+          - responsePayload
+
+### Схемы ###
+  schemas:
+    requestId:
+      description: Уникальный идентификатор запроса
+      type: string
+      example: "426614174000" 
+
+### Содержание запроса
+    requestPayload:
+      type: object
+      oneOf:
+      # один из...
+### 1
+        - type: object
+          properties:
+            type:
+              type: string
+              description: Тип запроса (например, addressRequest)
+              enum:
+                - addressRequest
+              example: "addressRequest"
+            city:
+              type: string
+              description: Город запрашиваемого адреса
+              example: "Москва"
+            street:
+              type: string
+              description: Улица запрашиваемого адреса
+              example: "Тверская"
+            houseNumber:
+              type: string
+              description: Номер дома запрашиваемого адреса
+              example: "1"
+            requestTime:
+              type: string
+              format: date-time
+              description: Время создания запроса
+              example: "2024-09-09T12:00:00Z"
+          required:
+            - type
+            - city
+            - street
+            - houseNumber
+            - requestTime
+### 2
+        - type: object
+          properties:
+            query:
+              type: string
+              description: Строка свободного поиска для неструктурированных запросов
+              example: "петропавловск-камчатский победы 7 кв 82"
+            requestTime:
+              type: string
+              format: date-time
+              description: Время создания запроса
+              example: "2024-09-09T12:00:00Z"
+          required:
+            - query
+            - requestTime
+
+### Содержание ответа
+    responsePayload:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Статус ответа
+          example: "success"
+        addressDetails:
+          $ref: '#/components/schemas/addressDetails'
+        responseTime:
+          type: string
+          format: date-time
+          description: Время создания ответа
+          example: "2024-09-09T12:01:30Z"
+      required:
+        - status
+        - addressDetails
+        - responseTime
+
+    addressDetails:
+      type: object
+      properties:
+        objectId:
+          type: integer
+          description: Уникальный идентификатор объекта
+          example: 1234567890123456789
+        objectGuid:
+          type: string
+          description: Уникальный GUID объекта
+          example: "fde8bf8d-ed7c-4e9c-b6d7-6ec46f191174"
+        name:
+          type: string
+          description: Полный адрес объекта
+          example: "683023, Камчатский край, г Петропавловск-Камчатский, пр-кт Победы, д 7, кв 82"
+        level:
+          type: string
+          description: Уровень адреса (например, квартира, этаж и т.д.)
+          example: "9"
+        isactive:
+          type: string
+          description: Статус активности объекта (1 - активен, 0 - неактивен)
+          example: "1"
+      required:
+        - objectId
+        - objectGuid
+        - name
+        - level
+        - isactive
+
+### Прочие
+    requestTime:
+      type: string
+      format: date-time
+      description: Дата-время запроса.
+    responseTime:
+      type: string
+      format: date-time
+      description: Дата-время ответа.
+
+### Схемы безопасности ###
+  securitySchemes:
+    saslScram:
+      type: scramSha256
+      description: Для аутентификации требуется логин/пароль
+    certs:
+      type: X509
+      description: Для аутентификации требуется сертификат.
+
+### Шаблон для операций
+  operationTraits: 
+    kafka:
+      bindings:
+        kafka:
+          clientId:
+            type: string
+            enum:
+              - gar-service-client-id
+```
+</details>
+
 
 <br>
