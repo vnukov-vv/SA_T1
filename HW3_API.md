@@ -193,11 +193,11 @@ components:
   </tr>
   <tr>
     <td>Дата</td>
-    <td>11.08.2024</td>
+    <td>11.09.2024</td>
   </tr>
   <tr>
     <td>Версия</td>
-    <td>1.0</td>
+    <td>2.0</td>
   </tr>
 </thead>
 </table>
